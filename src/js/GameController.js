@@ -1,11 +1,5 @@
 import themes from './themes';
 import { generateTeam } from './generators';
-import Bowman from './characters/Bowman';
-import Daemon from './characters/Daemon';
-import Magician from './characters/Magician';
-import Swordsman from './characters/Swordsman';
-import Undead from './characters/Undead';
-import Vampire from './characters/Vampire';
 import PositionedCharacter from './PositionedCharacter';
 import GameState from './GameState';
 import GamePlay from './GamePlay';
@@ -14,7 +8,6 @@ export default class GameController {
   constructor(gamePlay, stateService) {
     this.gamePlay = gamePlay;
     this.stateService = stateService;
-    this.teamSize = 3;
     this.playerTypes = ['bowman', 'swordsman', 'magician'];
     this.compTypes = ['daemon', 'undead', 'vampire'];
     this.themesTypes = ['prairie', 'desert', 'arctic', 'mountain'];
@@ -50,6 +43,7 @@ export default class GameController {
 
   changeLevel() {
     this.gameState.currentLevel++;
+    this.gameState.teamSize++;
     this.gameState.playerMove = true;
     this.resetState();
 
@@ -61,7 +55,7 @@ export default class GameController {
     }
 
     this.gamePlay.drawUi(themes[this.themesTypes[this.gameState.currentLevel - 1]]);
-    this.generateTeams(this.teamSize - this.gameState.playerTeam.length, this.teamSize);
+    this.generateTeams(this.gameState.teamSize - this.gameState.playerTeam.length, this.gameState.teamSize);
   }
 
   calcDamage(striker, defenseman) {
@@ -166,7 +160,7 @@ export default class GameController {
       }
       this.lines.push(line);
     }
-    this.generateTeams(this.teamSize, this.teamSize);
+    this.generateTeams(this.gameState.teamSize, this.gameState.teamSize);
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
@@ -180,13 +174,15 @@ export default class GameController {
     this.gameState.compTeam = [];
     this.gameState.currentLevel = 1;
     this.playerMove = true;
+    this.gameState.teamSize = 2;
     this.gameState.cellCharacter = undefined;
     this.gameState.selectedCell = null;
     this.gameState.canMoveCells = [];
     this.gameState.canStrikeCells = [];
     this.gameState.gameOver = false;
+    this.gameState.currentResult = 0;
     this.gamePlay.drawUi('prairie');
-    this.generateTeams(this.teamSize, this.teamSize);
+    this.generateTeams(this.gameState.teamSize, this.gameState.teamSize);
   }
 
   onSaveGameClick() {
@@ -208,6 +204,8 @@ export default class GameController {
     this.gameState.canMoveCells = [];
     this.gameState.canStrikeCells = [];
 
+    this.gameState.currentResult = loadGame.currentResult;
+    this.gameState.teamSize = loadGame.teamSize;
     this.gameState.gameOver = loadGame.gameOver;
     this.gameState.playerTeam = loadGame.playerTeam;
     this.gameState.compTeam = loadGame.compTeam;
@@ -325,6 +323,7 @@ export default class GameController {
                 a.character.health -= damage;
                 if (a.character.health <= 0) {
                   const findIndex = this.gameState.compTeam.findIndex((elem) => elem.position === index);
+                  this.gameState.currentResult += Math.floor(this.gameState.compTeam[findIndex].character.attack);
                   this.gameState.compTeam.splice(findIndex, 1);
                 }
                 if (this.gameState.compTeam.length === 0) {
@@ -334,7 +333,8 @@ export default class GameController {
                     this.gamePlay.redrawPositions(this.gameState.playerTeam);
                     this.gameState.selectedCell = null;
                     this.gamePlay.cellCharacter = undefined;
-                    GamePlay.showMessage('Вы победили!');
+                    this.gameState.bestResult = Math.max(this.gameState.currentResult, this.gameState.bestResult);
+                    GamePlay.showMessage('Вы победили!\nНабрано очков: ' + this.gameState.currentResult + '\nЛучший результат: ' + this.gameState.bestResult);
                     this.gameState.gameOver = true;
                   }
                 } else {

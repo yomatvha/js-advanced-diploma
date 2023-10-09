@@ -8,6 +8,9 @@ export default class GameState {
     this.canMoveCells = [];
     this.canStrikeCells = [];
     this.currentLevel = 1;
+    this.currentResult = 0;
+    this.bestResult = 0;
+    this.teamSize = 2;
     this.gameOver = false;
   }
 
